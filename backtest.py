@@ -85,47 +85,80 @@ def measure_estimator(user_pastinf, usernowinf):
     inf_df = pd.DataFrame(estimator_div)
     inf_df.to_csv('estimator_div.csv')
 
-def measure_estimetion(predict,curval,newresult):
+def measure_estimetion(predict,previousinf,currentinf,propagate_group):
     div={}
     error_list = [0] * 11
     mean_reversion =0
-    total_rev =0
+    total_reversion =0
     trend_follow =0
     total_follow =0
-    for h in newresult.keys():
-        if h in predict.keys():
-            sumpre = sum(predict[h])
-            sumnew = sum(newresult[h])
-            sumnow = sum(curval[h])
-            if sumnew ==0:
-                #print(f'{h} has inf {newresult[h]}')
-                continue
-            print(f'hashtag {h} pre inf {sumpre} new inf {sumnew}')
-            if sumpre>sumnow:
-                total_rev += 1
-                if sumnew>sumnow:
+    follow_trend = []
+    reversion_trend =[]
+    sametrend = 0
+    hash_inf_reversion = []
+    hash_inf_follow =[]
+    for h in predict.keys():
+        predict_inf = sum(predict[h])
+        previous_inf = sum(previousinf[h])
+        num_infer = propagate_group[h]
+        if previous_inf < predict_inf and num_infer >= 5:
+            total_reversion += 1
+            if h in currentinf.keys():
+                sametrend += 1
+                curinf = sum(currentinf[h])
+                if curinf == 0:
+                    continue
+                if curinf > previous_inf*0.1:
                     mean_reversion +=1
-            if sumnow>1.1*sumpre:
-                total_follow += 1
-                if sumnew>sumnow:
+                    reversion_trend.append(h)
+                    div[h] = abs(predict_inf-curinf)/curinf
+                    idx = int(div[h]// 0.1)
+                    idx = min(idx, 10)
+                    error_list[idx] += 1
+                    hash_inf_reversion.append([h,predict_inf,previous_inf,curinf])
+        if previous_inf>1.1*predict_inf and num_infer >=5:
+            total_follow += 1
+            if h in currentinf.keys():
+                sametrend += 1
+                curinf = sum(currentinf[h])
+                if curinf == 0:
+                    continue
+                if curinf>predict_inf:
                     trend_follow +=1
-            div[h] = abs(sumpre-sumnew)/sumnew
-            idx = int(div[h]// 0.1)
-            idx = min(idx, 10)
-            error_list[idx] += 1
+                    follow_trend.append(h)
+                    div[h] = abs(predict_inf-curinf)/curinf
+                    idx = int(div[h]// 0.1)
+                    idx = min(idx, 10)
+                    error_list[idx] += 1
+                    hash_inf_follow.append([h,predict_inf,previous_inf,curinf])
     sumtags = sum(error_list)
     if sumtags==0: return
-    print(f'mean reversion ratio is {mean_reversion/total_rev}')
-    print(f'trend following ratio is {trend_follow/total_follow}')
+
     error_list = [1.0*error_list[i]/sumtags for i in range(11)]
+    if total_reversion>0:
+        error_list.append(mean_reversion)
+        error_list.append(total_reversion)
+        print(f'mean reversion ratio is {mean_reversion/total_reversion}')
+    if total_follow>0:
+        print(f'trend following ratio is {trend_follow/total_follow}')
+        error_list.append(trend_follow)
+        error_list.append(total_follow)
+    error_list.append(sametrend)
     print(f'error trend distribution is {error_list}')
-    error_list.append(mean_reversion/total_rev)
-    error_list.append(trend_follow/total_follow)
     error_df = pd.DataFrame(error_list)
     error_df.to_csv('error_distribution.csv')
+    follow_trend_df = pd.DataFrame(follow_trend)
+    follow_trend_df.to_csv('follow_trend.csv')
+    hash_inf_reversion_df = pd.DataFrame(hash_inf_reversion)
+    hash_inf_reversion_df.to_csv('hash_inf_reversion.csv')
+    hash_inf_follow_df = pd.DataFrame(hash_inf_follow)
+    hash_inf_follow_df.to_csv('hash_inf_follow.csv')
+    reversion_trend_df = pd.DataFrame(reversion_trend)
+    reversion_trend_df.to_csv('reversion_trend.csv')
+    return sametrend
 
-def retrieve_trends(curdate):
-    startdate = curdate - datetime.timedelta(7)
+def retrieve_trends(curdate, timedif):
+    startdate = curdate - datetime.timedelta(timedif)
     hashtag = '#Bitcoin OR #Ether OR #ether OR #bitcoin'
     query = hashtag + ' since:' + str(startdate)+' until:'+str(curdate)
     print(f'query is {query}')
@@ -137,25 +170,32 @@ def retrieve_trends(curdate):
     hashtag_time ={}
     hashtag_trends_now ={}
     hashtag_trend_pre={}
+    propagte_group ={}
     record_round = 1
+    testtweets = 0
+    inftweets = 0
     for i, tweet in enumerate(totaltweets.get_items()):
+        testtweets += 1
         if tweet == None: continue
         if tweet.user.username in user_inf.keys(): continue
-        if len(hashtag_trends) >= record_round * 1000:
-            record_trend(hashtag_trends,hashtag_time)
-            # record_influencer(user_inf)
-            # measure_estimetion(hashtag_trends_predict, hashtag_trends_now)
-            measure_estimator(user_pastinf=user_inf_inthepast, usernowinf=user_inf)
-            record_round += 1
+        #if len(hashtag_trends) >= record_round * 100:
+            # record_trend(hashtag_trends,hashtag_time)
+            # # record_influencer(user_inf)
+            # # measure_estimetion(hashtag_trends_predict, hashtag_trends_now)
+            # measure_estimator(user_pastinf=user_inf_inthepast, usernowinf=user_inf)
+        #    break
+            # record_round += 1
         inf = [tweet.retweetCount, tweet.likeCount, tweet.replyCount]
         if inf == []: continue
         if my_criteria(inf):
+            inftweets += 1
             thisuser = tweet.user.username
             tag_Ipropagate = {}
             last_N_tweets = sntwitter.TwitterSearchScraper('from:' + thisuser +' until:'+str(curdate)).get_items()
             infthisuer = []
             infthisuer_inthepast = []
             for N, tweet_user in enumerate(last_N_tweets):
+                testtweets += 1
                 if tweet_user == None: continue
                 if N > PastN * 2:
                     break
@@ -164,6 +204,9 @@ def retrieve_trends(curdate):
                     infthisuer.append([tweet_user.retweetCount, tweet_user.likeCount, tweet_user.replyCount])
                 else:
                     infthisuer_inthepast.append([tweet_user.retweetCount, tweet_user.likeCount, tweet_user.replyCount])
+               # print(f'date is type of {type(tweet_user.date)}')
+                if tweet_user.date.date()<startdate:
+                    continue
                 for h in got_hashtags:
                     h = h.lower()
                     if N <= PastN:
@@ -184,18 +227,20 @@ def retrieve_trends(curdate):
                         hashtag_trends[h] += [avg[i] - tag_Ipropagate[h][i] for i in range(3)]
                         hashtag_trends_now[h] += tag_Ipropagate[h]
                         hashtag_trend_pre[h] += avg
+                        propagte_group[h] += 1
                     else:
                         hashtag_trends[h] = [avg[i] - tag_Ipropagate[h][i] for i in range(3)]
                         hashtag_trends_now[h] = tag_Ipropagate[h]
                         hashtag_trend_pre[h] = avg
+                        propagte_group[h] = 1
                 user_inf[thisuser] = [avg[0], avg[1], avg[2]]
-                print(f'user {thisuser} avg inf : {avg}')
+            #    print(f'user {thisuser} avg inf : {avg}')
             if len(infthisuer_inthepast) > 0:
                 infthisuer_inthepast = np.array(infthisuer_inthepast, dtype=np.float32)
                 avg = infthisuer_inthepast.mean(0)
                 user_inf_inthepast[thisuser] = [avg[0], avg[1], avg[2]]
-                print(f'user {thisuser} past avg inf : {avg}')
-    return [hashtag_trend_pre,hashtag_trends_now,user_inf]
+             #   print(f'user {thisuser} past avg inf : {avg}')
+    return [hashtag_trend_pre,hashtag_trends_now,propagte_group,hashtag_trends,hashtag_time,user_inf_inthepast,user_inf,inftweets,testtweets]
 
 def verify_pre(predictions,users,curdate):
     startdate = curdate-datetime.timedelta(7)
@@ -230,13 +275,41 @@ import datetime
 import re
 import operator
 import numpy as np
-curdate = datetime.date.today()
+curdate = datetime.datetime.today().date()
+curdate -= datetime.timedelta(1);
+#print(f'today is {curdate} type is {type(curdate)}')
 histroy_date = curdate - datetime.timedelta(7)
-histroy_trends = retrieve_trends(histroy_date)
+#print(f'histroy date is {histroy_date} type is {type(histroy_date)}')
+histroy_trends = retrieve_trends(histroy_date,6)
+histroy_inftweets = histroy_trends[7]
+histroy_testtweets = histroy_trends[8]
+histroy_hashtrends = histroy_trends[3]
+histroy_propagate_group = histroy_trends[2]
 
-result = verify_pre(predictions=histroy_trends[0], users=histroy_trends[2].keys(),curdate=curdate)
-#current_trends = retrieve_trends(curdate)
-measure_estimetion(predict=histroy_trends[0],curval=histroy_trends[1],newresult=result)
+#result = verify_pre(predictions=histroy_trends[0], users=histroy_trends[2].keys(),curdate=curdate)
+current_trends = retrieve_trends(curdate,6)
+current_predictor = current_trends[0]
+current_hashtrends = current_trends[3]
+current_trends_time = current_trends[4]
+current_estimator_past = current_trends[5]
+current_estimator = current_trends[6]
+current_inftweets = current_trends[7]
+current_testtweets = current_trends[8]
+
+record_trend(current_hashtrends,current_trends_time)
+measure_estimator(user_pastinf=current_estimator_past, usernowinf=current_estimator)
+tweets_crawled = [histroy_inftweets, histroy_testtweets, current_inftweets,current_testtweets]
+print(f'crawl data: {tweets_crawled}')
+tweets_crawled_df = pd.DataFrame(tweets_crawled)
+tweets_crawled_df.to_csv('tweets.csv')
+
+users_related = [len(histroy_trends[6]), len(current_trends[6])]
+print(f'crawl users:{users_related}')
+users_related_df = pd.DataFrame(users_related)
+users_related_df.to_csv('infers.csv')
+sametrend = measure_estimetion(predict=histroy_trends[0],previousinf=histroy_trends[1],currentinf=current_trends[1],propagate_group=histroy_propagate_group)
+
+
 
 # last_N_tweets = sntwitter.TwitterSearchScraper('from:AsithosM').get_items()
 # for N,tweet_user in enumerate(last_N_tweets):
