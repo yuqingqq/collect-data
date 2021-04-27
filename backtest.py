@@ -85,6 +85,15 @@ def measure_estimator(user_pastinf, usernowinf):
     inf_df = pd.DataFrame(estimator_div)
     inf_df.to_csv('estimator_div.csv')
 
+
+
+
+def record_tweets(tweets):
+    tweets_df = pd.DataFrame(tweets)
+    headers = ['id','url','user','date','content','retweet','like','reply','place',
+                                                'coordinates','lang','media','source','quotecount','quotedtweet']
+    tweets_df.to_csv('tweetsinfo.csv',header=headers)
+
 def measure_estimetion(predict,previousinf,currentinf,propagate_group):
     div={}
     error_list = [0] * 11
@@ -106,6 +115,7 @@ def measure_estimetion(predict,previousinf,currentinf,propagate_group):
             if h in currentinf.keys():
                 sametrend += 1
                 curinf = sum(currentinf[h])
+                hash_inf_reversion.append(h,predict_inf,previous_inf,curinf)
                 if curinf == 0:
                     continue
                 if curinf > previous_inf*0.1:
@@ -121,6 +131,7 @@ def measure_estimetion(predict,previousinf,currentinf,propagate_group):
             if h in currentinf.keys():
                 sametrend += 1
                 curinf = sum(currentinf[h])
+                hash_inf_follow.append([h,predict_inf,previous_inf,curinf])
                 if curinf == 0:
                     continue
                 if curinf>predict_inf:
@@ -157,7 +168,7 @@ def measure_estimetion(predict,previousinf,currentinf,propagate_group):
     reversion_trend_df.to_csv('reversion_trend.csv')
     return sametrend
 
-def retrieve_trends(curdate, timedif):
+def retrieve_trends(curdate, timedif, tweetsinfo):
     startdate = curdate - datetime.timedelta(timedif)
     hashtag = '#Bitcoin OR #Ether OR #ether OR #bitcoin'
     query = hashtag + ' since:' + str(startdate)+' until:'+str(curdate)
@@ -176,6 +187,7 @@ def retrieve_trends(curdate, timedif):
     inftweets = 0
     for i, tweet in enumerate(totaltweets.get_items()):
         testtweets += 1
+        tweetsinfo.append([tweet.id, tweet.url,tweet.user,tweet.date,tweet.content,tweet.retweetCount,tweet.likeCount,tweet.replyCount,tweet.place,tweet.coordinates,tweet.lang,tweet.media,tweet.source,tweet.quoteCount,tweet.quotedTweet])
         if tweet == None: continue
         if tweet.user.username in user_inf.keys(): continue
         #if len(hashtag_trends) >= record_round * 100:
@@ -278,16 +290,23 @@ import numpy as np
 curdate = datetime.datetime.today().date()
 curdate -= datetime.timedelta(1);
 #print(f'today is {curdate} type is {type(curdate)}')
-histroy_date = curdate - datetime.timedelta(7)
+histroy_date = curdate - datetime.timedelta(1)
 #print(f'histroy date is {histroy_date} type is {type(histroy_date)}')
-histroy_trends = retrieve_trends(histroy_date,6)
+
+tweetsinfo = []
+
+histroy_trends = retrieve_trends(histroy_date,1,tweetsinfo)
+
+record_tweets(tweetsinfo)
+
 histroy_inftweets = histroy_trends[7]
 histroy_testtweets = histroy_trends[8]
 histroy_hashtrends = histroy_trends[3]
 histroy_propagate_group = histroy_trends[2]
 
+
 #result = verify_pre(predictions=histroy_trends[0], users=histroy_trends[2].keys(),curdate=curdate)
-current_trends = retrieve_trends(curdate,6)
+current_trends = retrieve_trends(curdate,1,tweetsinfo)
 current_predictor = current_trends[0]
 current_hashtrends = current_trends[3]
 current_trends_time = current_trends[4]
@@ -309,7 +328,7 @@ users_related_df = pd.DataFrame(users_related)
 users_related_df.to_csv('infers.csv')
 sametrend = measure_estimetion(predict=histroy_trends[0],previousinf=histroy_trends[1],currentinf=current_trends[1],propagate_group=histroy_propagate_group)
 
-
+record_tweets(tweetsinfo)
 
 # last_N_tweets = sntwitter.TwitterSearchScraper('from:AsithosM').get_items()
 # for N,tweet_user in enumerate(last_N_tweets):
