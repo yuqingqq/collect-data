@@ -85,9 +85,6 @@ def measure_estimator(user_pastinf, usernowinf):
     inf_df = pd.DataFrame(estimator_div)
     inf_df.to_csv('estimator_div.csv')
 
-
-
-
 def record_tweets(tweets):
     tweets_df = pd.DataFrame(tweets)
     headers = ['id','url','user','date','content','retweet','like','reply','place',
@@ -115,7 +112,7 @@ def measure_estimetion(predict,previousinf,currentinf,propagate_group):
             if h in currentinf.keys():
                 sametrend += 1
                 curinf = sum(currentinf[h])
-                hash_inf_reversion.append(h,predict_inf,previous_inf,curinf)
+                hash_inf_reversion.append([h,predict_inf,previous_inf,curinf])
                 if curinf == 0:
                     continue
                 if curinf > previous_inf*0.1:
@@ -126,7 +123,7 @@ def measure_estimetion(predict,previousinf,currentinf,propagate_group):
                     idx = min(idx, 10)
                     error_list[idx] += 1
                     hash_inf_reversion.append([h,predict_inf,previous_inf,curinf])
-        if previous_inf>1.1*predict_inf and num_infer >=5:
+        if previous_inf>predict_inf and num_infer >=5:
             total_follow += 1
             if h in currentinf.keys():
                 sametrend += 1
@@ -146,6 +143,7 @@ def measure_estimetion(predict,previousinf,currentinf,propagate_group):
     if sumtags==0: return
 
     error_list = [1.0*error_list[i]/sumtags for i in range(11)]
+    error_list = []
     if total_reversion>0:
         error_list.append(mean_reversion)
         error_list.append(total_reversion)
@@ -187,8 +185,8 @@ def retrieve_trends(curdate, timedif, tweetsinfo):
     inftweets = 0
     for i, tweet in enumerate(totaltweets.get_items()):
         testtweets += 1
-        tweetsinfo.append([tweet.id, tweet.url,tweet.user,tweet.date,tweet.content,tweet.retweetCount,tweet.likeCount,tweet.replyCount,tweet.place,tweet.coordinates,tweet.lang,tweet.media,tweet.source,tweet.quoteCount,tweet.quotedTweet])
         if tweet == None: continue
+        tweetsinfo.append([tweet.id, tweet.url,tweet.user,tweet.date,tweet.content,tweet.retweetCount,tweet.likeCount,tweet.replyCount,tweet.place,tweet.coordinates,tweet.lang,tweet.media,tweet.source,tweet.quoteCount,tweet.quotedTweet])
         if tweet.user.username in user_inf.keys(): continue
         #if len(hashtag_trends) >= record_round * 100:
             # record_trend(hashtag_trends,hashtag_time)
