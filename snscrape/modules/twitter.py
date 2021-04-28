@@ -204,12 +204,15 @@ class TwitterAPIScraper(snscrape.base.Scraper):
 			self._session.cookies.set('gt', self._guestToken, domain = '.twitter.com', path = '/', secure = True, expires = time.time() + 10800)
 			self._apiHeaders['x-guest-token'] = self._guestToken
 			return
+		return
 		raise snscrape.base.ScraperException('Unable to find guest token')
 
 	def _unset_guest_token(self):
 		self._guestToken = None
-		del self._session.cookies['gt']
-		del self._apiHeaders['x-guest-token']
+		if 'gt' in self._session.cookies.keys():
+			del self._session.cookies['gt']
+		if 'x-guest-token' in self._apiHeaders.keys():
+			del self._apiHeaders['x-guest-token']
 
 	def _check_api_response(self, r):
 		if r.status_code == 429:
