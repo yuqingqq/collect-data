@@ -47,26 +47,26 @@ import numpy as np
 
 class TrendInfo:
 
-    def __init__(self, curdate, timedif:int, hashtag:str = '#Bitcoin OR #Ether OR #ether OR #bitcoin'):
-        self._endday = curdate - datetime.timedelta(1)
-        self._startday = self._endday - datetime.timedelta(timedif)
-        self._hashtag = hashtag
-        self._PastN = 100
-        self._hashtag_trends ={}
-        self._user_inf_inthepast={}
-        self._user_inf ={}
-        self._hashtag_time ={}
-        self._hashtag_trends_now ={}
-        self._hashtag_trend_pre={}
-        self._propagte_group ={}
-        self._tweetsinfo = []
-        self._tweetsuserinfo = []
-        self._testtweets = 0
-        self._inftweets = 0
+    def __init__(self, curdate:datetime.date, timedif:int, hashtag:str = '#Bitcoin OR #Ether OR #ether OR #bitcoin'):
+        self._endday: datetime.date = curdate - datetime.timedelta(1)
+        self._startday: datetime.date = self._endday - datetime.timedelta(timedif)
+        self._hashtag:str = hashtag
+        self._PastN:int = 100
+        self._hashtag_trends:Dict[str,List[float]] = {}
+        self._user_inf_inthepast : Dict[str,List[float]] ={}
+        self._user_inf : Dict[str,List[float]] ={}
+        self._hashtag_time: Dict[str,datetime.date] ={}
+        self._hashtag_trends_now :Dict[str,List[float]]={}
+        self._hashtag_trend_pre : Dict[str,List[float]]={}
+        self._propagte_group :Dict[str,int]={}
+        self._tweetsinfo :List[List[str]]= []
+        self._tweetsuserinfo:List[List[str]] = []
+        self._testtweets :int= 0
+        self._inftweets :int = 0
 
-    def my_criteria(self,data)->bool:
+    def my_criteria(self,inf:List[float])->bool:
         crit = [10,10,2]
-        if data>=crit:
+        if inf>=crit:
             return True
         return False
 
@@ -74,10 +74,10 @@ class TrendInfo:
         return re.findall('#\w+', content)
 
     def record_trend(self):
-        data = self._hashtag_trends
-        hashtag_time = self._hashtag_time
+        data :Dict[str,float]= self._hashtag_trends
+        hashtag_time:Dict[str,datetime.date] = self._hashtag_time
         sorted_trends = sorted(data.items(), key=operator.itemgetter(1), reverse=True)
-        trend_List = []
+        trend_List:List[List[str]] = []
         for k in sorted_trends:
             #print(f'tag: {k[0]} has {k[1]} more potential inf, start time:{hashtag_time[k[0]]}')
             #   if k[1]<=[0,0,0]: break
@@ -87,7 +87,7 @@ class TrendInfo:
 
     def record_influencer(self,data:Dict[str,List[int]]):
         sortedinfluencers = sorted(data.items(), key=operator.itemgetter(1), reverse=True)
-        influencer_List =[]
+        influencer_List:List[List[str]] =[]
         for k in sortedinfluencers:
             influencer_List.append([k[0],k[1][0],k[1][1],k[1][2]])
         inf_df = pd.DataFrame(influencer_List,columns=['username','retweet','Like','Reply'])
@@ -95,8 +95,8 @@ class TrendInfo:
 
     def measure_estimator(self):
         estimator_div =[0]*11
-        user_pastinf = self._user_inf_inthepast
-        usernowinf = self._user_inf
+        user_pastinf:Dict[str,List[float]] = self._user_inf_inthepast
+        usernowinf:Dict[str,List[float]] = self._user_inf
         for k,v in user_pastinf.items():
             if k not in usernowinf.keys():
                 continue
@@ -117,7 +117,7 @@ class TrendInfo:
         inf_df.to_csv('estimator_div.csv')
 
     def record_tweets(self,his:bool):
-        tweets_df = pd.DataFrame(self._tweetsinfo)
+        tweets_df:pd.DataFrame = pd.DataFrame(self._tweetsinfo)
         headers = ['id','url','user','date','content','retweet','like','reply','place',
                                                     'coordinates','lang','media','source','quotecount','quotedtweet']
         if his == True:
@@ -137,21 +137,21 @@ class TrendInfo:
         tweets_df.to_csv(name,header=headers)
     
     def measure_estimetion(self, currentinf:Dict[str,List[int]]):
-        div={}
-        error_List = [0] * 11
-        mean_reversion =0
-        total_reversion =0
-        trend_follow =0
-        total_follow =0
-        follow_trend = []
-        reversion_trend =[]
-        sametrend = 0
-        hash_inf_reversion = []
-        hash_inf_follow =[]
+        div:Dict[str,float]={}
+        error_List:list[float] = [0] * 11
+        mean_reversion:float =0
+        total_reversion:float =0
+        trend_follow:float =0
+        total_follow:float =0
+        follow_trend:List[str] = []
+        reversion_trend:List[str] =[]
+        sametrend:int = 0
+        hash_inf_reversion:List[List[str]] = []
+        hash_inf_follow:List[List[str]] =[]
         for h in self._hashtag_trend_pre.keys():
-            preDict_inf = sum(self._hashtag_trend_pre[h])
-            previous_inf = sum(self._hashtag_trends_now[h])
-            num_infer = self._propagte_group[h]
+            preDict_inf:float = sum(self._hashtag_trend_pre[h])
+            previous_inf:float = sum(self._hashtag_trends_now[h])
+            num_infer:int = self._propagte_group[h]
             if previous_inf < preDict_inf and num_infer >= 5:
                 total_reversion += 1
                 if h in currentinf.keys():
@@ -187,7 +187,7 @@ class TrendInfo:
         sumtags = sum(error_List)
         if sumtags==0: return
         error_List = [1.0*error_List[i]/sumtags for i in range(11)]
-        error_List = []
+        error_List:List[float] = []
         if total_reversion>0:
             error_List.append(mean_reversion)
             error_List.append(total_reversion)
@@ -210,14 +210,14 @@ class TrendInfo:
         reversion_trend_df.to_csv('reversion_trend.csv')
         #return sametrend
 
-    def get_current_trends(self)->Dict[str,List[int]]:
+    def get_current_trends(self)->Dict[str,List[float]]:
         return self._hashtag_trends_now
 
     def retrieve_trends(self):
-        query = self._hashtag + ' since:' + str(self._startday)+' until:'+str(self._endday)
+        query :str = self._hashtag + ' since:' + str(self._startday)+' until:'+str(self._endday)
         print(f'query is {query}')
         totaltweets = sntwitter.TwitterSearchScraper(query)
-        record_round = 1
+        record_round :int= 1
         for i, tweet in enumerate(totaltweets.get_items()):
             self._testtweets += 1
             if tweet == None: continue
@@ -225,15 +225,15 @@ class TrendInfo:
             if tweet.user.username in self._user_inf.keys(): continue
             if len(self._hashtag_trends) >= record_round * 50:
                break
-            inf = [tweet.retweetCount, tweet.likeCount, tweet.replyCount]
+            inf :List[float]= [tweet.retweetCount, tweet.likeCount, tweet.replyCount]
             if inf == []: continue
             if self.my_criteria(inf):
                 self._inftweets += 1
-                thisuser = tweet.user.username
-                tag_Ipropagate = {}
+                thisuser:str = tweet.user.username
+                tag_Ipropagate :Dict[str,float]= {}
                 last_N_tweets = sntwitter.TwitterSearchScraper('from:' + thisuser +' until:'+str(self._endday)).get_items()
-                infthisuer = []
-                infthisuer_inthepast = []
+                infthisuer:List[List[float]] = []
+                infthisuer_inthepast: List[List[float]] = []
                 for N, tweet_user in enumerate(last_N_tweets):
                     self._testtweets += 1
                     if tweet_user == None: continue
