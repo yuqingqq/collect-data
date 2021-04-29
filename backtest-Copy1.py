@@ -93,7 +93,7 @@ class TrendInfo:
         for k in sortedinfluencers:
             influencer_List.append([k[0],k[1][0],k[1][1],k[1][2]])
         inf_df = pd.DataFrame(influencer_List,columns=['username','retweet','Like','Reply'])
-        name = 'influencer_'+str(self._endday)+'.csv'
+        name = 'influencer_'+str(self._startday)+'.csv'
         inf_df.to_csv(name,header=True)
 
     def measure_estimator(self):
@@ -126,7 +126,7 @@ class TrendInfo:
         if his == True:
             name = 'tweetsinfo_his.csv'
         else:
-            name = 'seedtag_'+str(self._endday)+'.csv'
+            name = 'seedtag_'+str(self._startday)+'.csv'
         tweets_df.to_csv(name,header=headers)
 
     def record_user_tweets(self,his:bool):
@@ -136,11 +136,11 @@ class TrendInfo:
         if his == True:
             name = 'tweetsuserinfo_his.csv'
         else:
-            name = 'usertweets_'+str(self._endday)+'.csv'
+            name = 'usertweets_'+str(self._startday)+'.csv'
         tweets_df.to_csv(name,header=headers)
 
-    def fetch_long_term_data(self,startdate:datetime.date=datetime.date(year=2021,month=1,day=1)):
-        curday = datetime.date.today()-datetime.timedelta(1)
+    def fetch_long_term_data(self,startdate:datetime.date=datetime.date(year=2021,month=1,day=1),enddate:datetime.date= datetime.date.today()):
+        curday = enddate-datetime.timedelta(1)
         while curday>startdate:
             self._endday = curday
             self._startday = curday-datetime.timedelta(1)
@@ -330,18 +330,18 @@ class TrendInfo:
     #     return propagation_res
 
 if __name__ == "__main__":
-
     curdate = datetime.datetime.today().date()
     curdate -= datetime.timedelta(1);
     startdate = sys.argv[1]
-    year = int(startdate[0:4])
-    month = int(startdate[4:6])
-    day = int(startdate[6:])
+    startdate = datetime.date(year = int(startdate[0:4]),month=int(startdate[4:6]),day = int(startdate[6:]))
+    enddate = sys.argv[2]
+    enddate = datetime.date(year = int(enddate[0:4]),month=int(enddate[4:6]),day = int(enddate[6:]))
+
     #print(f'today is {curdate} type is {type(curdate)}')
     #histroy_date = curdate - datetime.timedelta(7)
     #print(f'histroy date is {histroy_date} type is {type(histroy_date)}')
     histroy_trends = TrendInfo(curdate,1)
-    histroy_trends.fetch_long_term_data(startdate=datetime.date(year=year,month=month,day=day))
+    histroy_trends.fetch_long_term_data(startdate,enddate)
 
 #result = verify_pre(preDictions=histroy_trends[0], users=histroy_trends[2].keys(),curdate=curdate)
 # current_trends = TrendInfo(curdate,7)
