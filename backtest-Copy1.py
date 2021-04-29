@@ -239,7 +239,7 @@ class TrendInfo:
             for h in self.retrive_hashtags(tweet.content):
                 if tweet_hashtags=="":tweet_hashtags+= h
                 else: tweet_hashtags = tweet_hashtags+" "+h
-            self._tweetsinfo.append([tweet.id, tweet.url,tweet.user,tweet.date,tweet.content,tweet_hashtags,tweet.retweetCount,tweet.likeCount,tweet.replyCount,tweet.place,tweet.coordinates,tweet.lang,tweet.media,tweet.source,tweet.quoteCount,tweet.quotedTweet])
+            self._tweetsinfo.append([tweet.id, tweet.url,tweet.user.username,tweet.date,tweet.content,tweet_hashtags,tweet.retweetCount,tweet.likeCount,tweet.replyCount,tweet.place,tweet.coordinates,tweet.lang,tweet.media,tweet.source,tweet.quoteCount,tweet.quotedTweet])
             if tweet.user.username in self._user_inf.keys(): continue
             inf :List[float]= [tweet.retweetCount, tweet.likeCount, tweet.replyCount]
             if inf == []: continue
@@ -268,7 +268,7 @@ class TrendInfo:
                     for h in got_hashtags:
                         if tweet_use_hashtags == "": tweet_use_hashtags+=h
                         else: tweet_use_hashtags = tweet_use_hashtags+" "+h
-                    self._tweetsuserinfo.append([tweet_user.id, tweet_user.url,tweet_user.user,tweet_user.date,tweet_user.content,tweet_use_hashtags,tweet_user.retweetCount,tweet_user.likeCount,tweet_user.replyCount,tweet_user.place,tweet_user.coordinates,tweet_user.lang,tweet_user.media,tweet_user.source,tweet_user.quoteCount,tweet_user.quotedTweet])
+                    self._tweetsuserinfo.append([tweet_user.id, tweet_user.url,tweet_user.user.username,tweet_user.date,tweet_user.content,tweet_use_hashtags,tweet_user.retweetCount,tweet_user.likeCount,tweet_user.replyCount,tweet_user.place,tweet_user.coordinates,tweet_user.lang,tweet_user.media,tweet_user.source,tweet_user.quoteCount,tweet_user.quotedTweet])
                     for h in got_hashtags:
                         h = h.lower()
                         if N <= self._PastN:
