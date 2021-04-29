@@ -85,13 +85,15 @@ class TrendInfo:
         trend_df = pd.DataFrame(trend_List, columns=['Trend', 'Retweet', 'Like', 'Reply', 'Start Time'])
         trend_df.to_csv('trend.csv', header=True)
 
-    def record_influencer(self,data:Dict[str,List[int]]):
+    def record_influencer(self):
+        data :Dict[str,List[float]] = self._user_inf
         sortedinfluencers = sorted(data.items(), key=operator.itemgetter(1), reverse=True)
         influencer_List:List[List[str]] =[]
         for k in sortedinfluencers:
             influencer_List.append([k[0],k[1][0],k[1][1],k[1][2]])
         inf_df = pd.DataFrame(influencer_List,columns=['username','retweet','Like','Reply'])
-        inf_df.to_csv('influencer.csv',header=True)
+        name = 'influencer_'+str(self._endday)+'.csv'
+        inf_df.to_csv(name,header=True)
 
     def measure_estimator(self):
         estimator_div =[0]*11
@@ -123,19 +125,30 @@ class TrendInfo:
         if his == True:
             name = 'tweetsinfo_his.csv'
         else:
-            name = 'tweetsinfo.csv'
+            name = 'seedtag_'+str(self._endday)+'.csv'
         tweets_df.to_csv(name,header=headers)
 
     def record_user_tweets(self,his:bool):
-        tweets_df = pd.DataFrame(self._tweetsuserinfo)
+        tweets_df:pd.DataFrame = pd.DataFrame(self._tweetsuserinfo)
         headers = ['id','url','user','date','content','retweet','like','reply','place',
                                                     'coordinates','lang','media','source','quotecount','quotedtweet']
         if his == True:
             name = 'tweetsuserinfo_his.csv'
         else:
-            name = 'tweetsuserinfo.csv'
+            name = 'usertweets_'+str(self._endday)+'.csv'
         tweets_df.to_csv(name,header=headers)
-    
+
+    def fetch_long_term_data(self,startdate:datetime.date=datetime.date(year=2021,month=1,day=1)):
+        curday = datetime.date.today()-datetime.timedelta(1)
+        while curday>=startdate:
+            self._endday = curday
+            self._startday = curday-datetime.timedelta(1)
+            self.retrieve_trends()
+            self.record_user_tweets(his=False)
+            self.record_tweets(his=False)
+            self.record_influencer()
+            curday -= datetime.timedelta(1)
+
     def measure_estimetion(self, currentinf:Dict[str,List[int]]):
         div:Dict[str,float]={}
         error_List:list[float] = [0] * 11
@@ -220,11 +233,13 @@ class TrendInfo:
         record_round :int= 1
         for i, tweet in enumerate(totaltweets.get_items()):
             self._testtweets += 1
-            if tweet == None: continue
-            self._tweetsinfo.append([tweet.id, tweet.url,tweet.user,tweet.date,tweet.content,tweet.retweetCount,tweet.likeCount,tweet.replyCount,tweet.place,tweet.coordinates,tweet.lang,tweet.media,tweet.source,tweet.quoteCount,tweet.quotedTweet])
+            if tweet == None or tweet.date.date()<=self._startday: continue
+            tweet_hashtags = ""
+            for h in self.retrive_hashtags(tweet.content):
+                if tweet_hashtags=="":tweet_hashtags+= h
+                else: tweet_hashtags = tweet_hashtags+" "+h
+            self._tweetsinfo.append([tweet.id, tweet.url,tweet.user,tweet.date,tweet.content,tweet_hashtags,tweet.retweetCount,tweet.likeCount,tweet.replyCount,tweet.place,tweet.coordinates,tweet.lang,tweet.media,tweet.source,tweet.quoteCount,tweet.quotedTweet])
             if tweet.user.username in self._user_inf.keys(): continue
-            if len(self._hashtag_trends) >= record_round * 50:
-               break
             inf :List[float]= [tweet.retweetCount, tweet.likeCount, tweet.replyCount]
             if inf == []: continue
             if self.my_criteria(inf):
@@ -237,17 +252,22 @@ class TrendInfo:
                 for N, tweet_user in enumerate(last_N_tweets):
                     self._testtweets += 1
                     if tweet_user == None: continue
-                    self._tweetsuserinfo.append([tweet_user.id, tweet_user.url,tweet_user.user,tweet_user.date,tweet_user.content,tweet_user.retweetCount,tweet_user.likeCount,tweet_user.replyCount,tweet_user.place,tweet_user.coordinates,tweet_user.lang,tweet_user.media,tweet_user.source,tweet_user.quoteCount,tweet_user.quotedTweet])
-                    if N > self._PastN * 2:
+                    #if N > self._PastN * 2:
+                    if N > self._PastN:
                         break
                     got_hashtags = self.retrive_hashtags(content=tweet_user.content)
                     if N <= self._PastN:
                         infthisuer.append([tweet_user.retweetCount, tweet_user.likeCount, tweet_user.replyCount])
-                    else:
-                        infthisuer_inthepast.append([tweet_user.retweetCount, tweet_user.likeCount, tweet_user.replyCount])
+                    #else:
+                    #   infthisuer_inthepast.append([tweet_user.retweetCount, tweet_user.likeCount, tweet_user.replyCount])
                    # print(f'date is type of {type(tweet_user.date)}')
                     if tweet_user.date.date()<self._startday:
                         continue
+                    tweet_use_hashtags = ""
+                    for h in got_hashtags:
+                        if tweet_use_hashtags == "": tweet_use_hashtags+=h
+                        else: tweet_use_hashtags = tweet_use_hashtags+" "+h
+                    self._tweetsuserinfo.append([tweet_user.id, tweet_user.url,tweet_user.user,tweet_user.date,tweet_user.content,tweet_use_hashtags,tweet_user.retweetCount,tweet_user.likeCount,tweet_user.replyCount,tweet_user.place,tweet_user.coordinates,tweet_user.lang,tweet_user.media,tweet_user.source,tweet_user.quoteCount,tweet_user.quotedTweet])
                     for h in got_hashtags:
                         h = h.lower()
                         if N <= self._PastN:
@@ -276,10 +296,10 @@ class TrendInfo:
                             self._propagte_group[h] = 1
                     self._user_inf[thisuser] = [avg[0], avg[1], avg[2]]
                 #    print(f'user {thisuser} avg inf : {avg}')
-                if len(infthisuer_inthepast) > 0:
-                    infthisuer_inthepast = np.array(infthisuer_inthepast, dtype=np.float32)
-                    avg = infthisuer_inthepast.mean(0)
-                    self._user_inf_inthepast[thisuser] = [avg[0], avg[1], avg[2]]
+                # if len(infthisuer_inthepast) > 0:
+                #     infthisuer_inthepast = np.array(infthisuer_inthepast, dtype=np.float32)
+                #     avg = infthisuer_inthepast.mean(0)
+                #     self._user_inf_inthepast[thisuser] = [avg[0], avg[1], avg[2]]
                  #   print(f'user {thisuser} past avg inf : {avg}')
         #return [hashtag_trend_pre,hashtag_trends_now,propagte_group,hashtag_trends,hashtag_time,user_inf_inthepast,user_inf,inftweets,testtweets]
 
@@ -308,23 +328,20 @@ class TrendInfo:
     #                 propagation_res[h] =v
     #     return propagation_res
 
-
 curdate = datetime.datetime.today().date()
 curdate -= datetime.timedelta(1);
 #print(f'today is {curdate} type is {type(curdate)}')
 histroy_date = curdate - datetime.timedelta(7)
 #print(f'histroy date is {histroy_date} type is {type(histroy_date)}')
 
-histroy_trends = TrendInfo(histroy_date,7)
-histroy_trends.retrieve_trends()
-histroy_trends.record_tweets(his=True)
-histroy_trends.record_user_tweets(his=True)
+histroy_trends = TrendInfo(histroy_date,1)
+histroy_trends.fetch_long_term_data(startdate=datetime.date(year=2021,month=4,day=28))
 
 #result = verify_pre(preDictions=histroy_trends[0], users=histroy_trends[2].keys(),curdate=curdate)
-current_trends = TrendInfo(curdate,7)
-current_trends.retrieve_trends()
-current_trends.record_tweets(his=False)
-current_trends.record_user_tweets(his=False)
+# current_trends = TrendInfo(curdate,7)
+# current_trends.retrieve_trends()
+# current_trends.record_tweets(his=False)
+# current_trends.record_user_tweets(his=False)
 #current_trends.record_trend()
 
 # current_preDictor = current_trends[0]
@@ -335,7 +352,7 @@ current_trends.record_user_tweets(his=False)
 # current_inftweets = current_trends[7]
 # current_testtweets = current_trends[8]
 
-current_trends.measure_estimator()
+#current_trends.measure_estimator()
 
 #tweets_crawled = [histroy_trends, histroy_testtweets, current_inftweets,current_testtweets]
 #print(f'crawl data: {tweets_crawled}')
@@ -346,7 +363,8 @@ current_trends.measure_estimator()
 # print(f'crawl users:{users_related}')
 # users_related_df = pd.DataFrame(users_related)
 # users_related_df.to_csv('infers.csv')
-sametrend = histroy_trends.measure_estimetion(current_trends.get_current_trends())
+
+#sametrend = histroy_trends.measure_estimetion(current_trends.get_current_trends())
 
 
 # last_N_tweets = sntwitter.TwitterSearchScraper('from:AsithosM').get_items()
