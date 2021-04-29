@@ -44,6 +44,7 @@ import datetime
 import re
 import operator
 import numpy as np
+import sys
 
 class TrendInfo:
 
@@ -120,7 +121,7 @@ class TrendInfo:
 
     def record_tweets(self,his:bool):
         tweets_df:pd.DataFrame = pd.DataFrame(self._tweetsinfo)
-        headers = ['id','url','user','date','content','retweet','like','reply','place',
+        headers = ['id','url','user','date','content','hashtags','retweet','like','reply','place',
                                                     'coordinates','lang','media','source','quotecount','quotedtweet']
         if his == True:
             name = 'tweetsinfo_his.csv'
@@ -130,7 +131,7 @@ class TrendInfo:
 
     def record_user_tweets(self,his:bool):
         tweets_df:pd.DataFrame = pd.DataFrame(self._tweetsuserinfo)
-        headers = ['id','url','user','date','content','retweet','like','reply','place',
+        headers = ['id','url','user','date','content','hashtags','retweet','like','reply','place',
                                                     'coordinates','lang','media','source','quotecount','quotedtweet']
         if his == True:
             name = 'tweetsuserinfo_his.csv'
@@ -140,7 +141,7 @@ class TrendInfo:
 
     def fetch_long_term_data(self,startdate:datetime.date=datetime.date(year=2021,month=1,day=1)):
         curday = datetime.date.today()-datetime.timedelta(1)
-        while curday>=startdate:
+        while curday>startdate:
             self._endday = curday
             self._startday = curday-datetime.timedelta(1)
             self.retrieve_trends()
@@ -233,7 +234,7 @@ class TrendInfo:
         record_round :int= 1
         for i, tweet in enumerate(totaltweets.get_items()):
             self._testtweets += 1
-            if tweet == None or tweet.date.date()<=self._startday: continue
+            if tweet == None or tweet.date.date()<self._startday: continue
             tweet_hashtags = ""
             for h in self.retrive_hashtags(tweet.content):
                 if tweet_hashtags=="":tweet_hashtags+= h
@@ -328,14 +329,19 @@ class TrendInfo:
     #                 propagation_res[h] =v
     #     return propagation_res
 
-curdate = datetime.datetime.today().date()
-curdate -= datetime.timedelta(1);
-#print(f'today is {curdate} type is {type(curdate)}')
-histroy_date = curdate - datetime.timedelta(7)
-#print(f'histroy date is {histroy_date} type is {type(histroy_date)}')
+if __name__ == "__main__":
 
-histroy_trends = TrendInfo(histroy_date,1)
-histroy_trends.fetch_long_term_data(startdate=datetime.date(year=2021,month=4,day=28))
+    curdate = datetime.datetime.today().date()
+    curdate -= datetime.timedelta(1);
+    startdate = sys.argv[1]
+    year = int(startdate[0:4])
+    month = int(startdate[4:6])
+    day = int(startdate[6:])
+    #print(f'today is {curdate} type is {type(curdate)}')
+    #histroy_date = curdate - datetime.timedelta(7)
+    #print(f'histroy date is {histroy_date} type is {type(histroy_date)}')
+    histroy_trends = TrendInfo(curdate,1)
+    histroy_trends.fetch_long_term_data(startdate=datetime.date(year=year,month=month,day=day))
 
 #result = verify_pre(preDictions=histroy_trends[0], users=histroy_trends[2].keys(),curdate=curdate)
 # current_trends = TrendInfo(curdate,7)
