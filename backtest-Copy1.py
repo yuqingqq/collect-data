@@ -150,6 +150,19 @@ class TrendInfo:
             self.record_influencer()
             curday -= datetime.timedelta(1)
 
+    def refresh(self):
+        self._hashtag_trends:Dict[str,List[float]] = {}
+        self._user_inf_inthepast : Dict[str,List[float]] ={}
+        self._user_inf : Dict[str,List[float]] ={}
+        self._hashtag_time: Dict[str,datetime.date] ={}
+        self._hashtag_trends_now :Dict[str,List[float]]={}
+        self._hashtag_trend_pre : Dict[str,List[float]]={}
+        self._propagte_group :Dict[str,int]={}
+        self._tweetsinfo :List[List[str]]= []
+        self._tweetsuserinfo:List[List[str]] = []
+        self._testtweets :int= 0
+        self._inftweets :int = 0
+
     def measure_estimetion(self, currentinf:Dict[str,List[int]]):
         div:Dict[str,float]={}
         error_List:list[float] = [0] * 11
