@@ -140,7 +140,7 @@ class TrendInfo:
         tweets_df.to_csv(name,header=headers)
 
     def fetch_long_term_data(self,startdate:datetime.date=datetime.date(year=2021,month=1,day=1),enddate:datetime.date= datetime.date.today()):
-        curday = enddate-datetime.timedelta(1)
+        curday = enddate
         while curday>startdate:
             self._endday = curday
             self._startday = curday-datetime.timedelta(1)
@@ -148,6 +148,7 @@ class TrendInfo:
             self.record_user_tweets(his=False)
             self.record_tweets(his=False)
             self.record_influencer()
+            self.refresh()
             curday -= datetime.timedelta(1)
 
     def refresh(self):
